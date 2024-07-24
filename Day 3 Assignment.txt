@@ -1,0 +1,131 @@
+01==> START TRANSACTION;
+      insert into student values(10,"hussin","ali","hhh@gmial.com","menofia","male","2005-05-12");
+      commit;
+-------------------------------------------------------------------------------------------------------      
+02==> SELECT DATE_FORMAT(exam_date, "%d %M %Y") as 'Date'
+      from stu_exam_subj;
+-------------------------------------------------------------------------------------------------------
+03==> SELECT first_name, birth_date, TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) AS age FROM student;
+-------------------------------------------------------------------------------------------------------
+04==> select student.first_name, round(exam_score,2)
+      from stu_exam_subj join student
+      on stu_exam_subj.stuid=student.id;
+-------------------------------------------------------------------------------------------------------
+05==> SELECT DATE_FORMAT(birth_date, "%Y") from student;
+-------------------------------------------------------------------------------------------------------
+06==> insert into stu_exam_subj values(1,1,now(),78);
+-------------------------------------------------------------------------------------------------------
+07==> delimiter //
+      create function hello(user varchar(255))
+      returns varchar(255)
+      deterministic
+      begin
+        return concat("welcome ",user);
+      end //
+      delimiter ;
+-------------------------------------------------------------------------------------------------------
+08==> delimiter //
+      create function multiply(x int, y int)
+      returns int
+      deterministic
+      begin
+        return x*y;
+      end//
+      delimiter ;
+-------------------------------------------------------------------------------------------------------
+09==> delimiter //
+      create procedure score(studentid int, subjectid int)
+      begin
+      select student.first_name as Student, subject.name as Subject, stu_exam_subj.exam_score as Score
+      from student join subject join stu_exam_subj
+      on stu_exam_subj.stuid=student.id and stu_exam_subj.subjid=subject.id
+      where stu_exam_subj.stuid = studentid and stu_exam_subj.subjid=subjectid;
+      end//
+      delimiter ;
+-------------------------------------------------------------------------------------------------------
+10==> delimiter //
+      create procedure failed(subjectid int)
+      begin
+      select student.first_name as Student, subject.name as Subject, stu_exam_subj.exam_score as Score
+      from student join subject join stu_exam_subj
+      on stu_exam_subj.stuid=student.id and stu_exam_subj.subjid=subject.id
+      where stu_exam_subj.subjid=subjectid
+      having score<50;
+      end//
+      delimiter ;
+-------------------------------------------------------------------------------------------------------
+11==> delimiter //
+      create procedure avg(subjectid int)
+      begin
+      select subject.name as Subject, avg(stu_exam_subj.exam_score) as avg_Score
+      from student join subject join stu_exam_subj
+      on stu_exam_subj.stuid=student.id and stu_exam_subj.subjid=subject.id
+      where stu_exam_subj.subjid=subjectid
+      group by Subject;
+      end//
+      delimiter ;
+-------------------------------------------------------------------------------------------------------
+12==> create table Deleted_Students like student;
+-------------------------------------------------------------------------------------------------------
+13==> delimiter //
+      create trigger student_deleted
+      after delete on student
+      for each row
+      begin
+        insert into Deleted_Students
+        values (old.id, old.first_name, old.last_name, old.email, old.address, old.gender, old.birth_date);
+      end //
+      delimiter ;
+-------------------------------------------------------------------------------------------------------
+14==> create table Backup_Students like student;
+
+      delimiter //
+      create trigger student_added
+      after insert on student
+      for each row
+      begin
+        insert into Backup_Students
+        values (new.id, new.first_name, new.last_name, new.email, new.address, new.gender, new.birth_date);
+      end //
+      delimiter ;
+-------------------------------------------------------------------------------------------------------
+15==> create table changes (change_type varchar(255), change_time timestamp default current_timestamp); 
+
+      delimiter //
+      create trigger changes_trigger
+      after insert on changes
+      for each row
+      begin
+        insert into Backup_Students (change_type)
+        values ('INSERT');
+      end //
+      delimiter ;
+      
+      delimiter //
+      create trigger changes_trigger
+      after delete on changes
+      for each row
+      begin
+        insert into Backup_Students (change_type)
+        values ('DELETE');
+      end //
+      delimiter ;
+      
+      delimiter //
+      create trigger changes_trigger
+      after update on changes
+      for each row
+      begin
+        insert into Backup_Students (change_type)
+        values ('UPDATE');
+      end //
+      delimiter ;
+
+-------------------------------------------------------------------------------------------------------
+16==> sudo mysqldump abdodb >abdo_222_backup.sql
+-------------------------------------------------------------------------------------------------------
+17==> sudo mysqldump --tables abdodb student >students.sql
+-------------------------------------------------------------------------------------------------------
+18==> create database backup_abdodb; 
+      sudo mysqldump backup_abdodb <abdo_222_backup.sql
+-------------------------------------------------------------------------------------------------------
